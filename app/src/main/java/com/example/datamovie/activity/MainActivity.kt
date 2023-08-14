@@ -10,9 +10,11 @@ import com.example.datamovie.adapter.MovieAdapter
 import com.example.datamovie.model.Response
 import com.example.datamovie.rest.ApiClient
 import com.example.datamovie.rest.ApiInterface
-import com.google.android.material.search.SearchView
+
 import retrofit2.Call
 import retrofit2.Callback
+import androidx.appcompat.widget.SearchView
+import com.example.datamovie.model.Results
 
 class MainActivity : AppCompatActivity() {
     private lateinit var adapter: MovieAdapter
@@ -56,6 +58,37 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
+        searchView = menu?.findItem(R.id.search)?.actionView as SearchView
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                if (newText?.length ?: 0 > 1) {
+                    val apiInterface = ApiClient.getClient().create(ApiInterface::class.java)
+                    val call = apiInterface.getQuery(API_KEY, LANGUAGE, newText ?: "", PAGE)
+                    call.enqueue(object : Callback<Response> {
+                        override fun onResponse(call: Call<Response>, response: retrofit2.Response<Response>) {
+                            if (response.isSuccessful && response.body() != null) {
+                                val mList: List<Results>? = response.body()?.results
+                                if (mList != null) {
+                                    adapter = MovieAdapter(this@MainActivity, mList)
+                                    recyclerView.adapter = adapter
+                                }
+                            } else {
+                                // Handle error case if needed
+                            }
+                        }
+
+                        override fun onFailure(call: Call<Response>, t: Throwable) {
+                            // Handle failure case if needed
+                        }
+                    })
+                }
+                return true
+            }
+        })
         return super.onCreateOptionsMenu(menu)
     }
 }
